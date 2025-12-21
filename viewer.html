@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>トイレのレイオー 絵本ビューア</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+      background: #faf5e9;
+      color: #333;
+    }
+    .viewer-root {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    header h1 {
+      margin: 4px 0;
+      font-size: 1.6rem;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .spread {
+      display: flex;
+      gap: 16px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 16px;
+      box-sizing: border-box;
+      min-height: 60vh;
+    }
+    .page-left,
+    .page-right {
+      flex: 1 1 0;
+      box-sizing: border-box;
+    }
+    .page-left {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .page-left img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      background: #fdfdfd;
+      object-fit: contain;
+    }
+    .page-right {
+      display: flex;
+      flex-direction: column;
+      padding: 8px 4px;
+    }
+    .page-meta {
+      font-size: 0.85rem;
+      color: #777;
+      margin-bottom: 4px;
+    }
+    .page-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .page-text {
+      font-size: 1rem;
+      line-height: 1.7;
+      white-space: pre-line;
+      margin-bottom: 12px;
+    }
+    .page-dialogue {
+      font-size: 1rem;
+      line-height: 1.7;
+      white-space: pre-line;
+      padding-left: 0.8em;
+      border-left: 3px solid #ffd48a;
+      background: #fff7e3;
+      border-radius: 6px;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      gap: 8px;
+    }
+    .buttons {
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      background: #ffcc7f;
+      color: #4a3516;
+      font-size: 0.95rem;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: background 0.15s, transform 0.1s;
+    }
+    button:disabled {
+      background: #e0d6c4;
+      color: #8b8276;
+      cursor: default;
+      box-shadow: none;
+    }
+    button:hover:not(:disabled) {
+      background: #ffb952;
+      transform: translateY(-1px);
+    }
+    .page-indicator {
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    @media (max-width: 768px) {
+      .spread {
+        flex-direction: column;
+      }
+      .page-left img {
+        max-height: 40vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer-root">
+    <header>
+      <h1>トイレのレイオー</h1>
+      <p>← 前へ / 次へ → でページをめくる絵本ビューア</p>
+    </header>
+
+    <div class="spread">
+      <div class="page-left">
+        <img id="page-image" src="" alt="絵本ページのイラスト">
+      </div>
+      <div class="page-right">
+        <div class="page-meta" id="page-meta"></div>
+        <div class="page-title" id="page-title"></div>
+        <div class="page-text" id="page-text"></div>
+        <div class="page-dialogue" id="page-dialogue" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="buttons">
+        <button id="prev-btn">← 前へ</button>
+        <button id="next-btn">次へ →</button>
+      </div>
+      <div class="page-indicator" id="page-indicator"></div>
+    </div>
+  </div>
+
+  <script>
+    // 絵本のページデータ
+    const pages = [
+      {
+        id: 1,
+        label: "表紙",
+        title: "トイレのレイオー",
+        image: "cover.png",
+        text: "",
+        dialogue: ""
+      },
+      {
+        id: 2,
+        label: "1ページ（導入）",
+        title: "ドアの前のゆうくん",
+        image: "page1.png",
+        text: "ゆうくんは、ドアの前でモジモジ。\nなんだかムズムズするけど、ちょっとこわいな…。",
+        dialogue: "ゆうくん「……こわいかも……」"
+      },
+      {
+        id: 3,
+        label: "2ページ",
+        title: "不安そうなゆうくん",
+        image: "page2.png",
+        text: "",
+        dialogue: "ゆうくん「……こわいかも……」"
+      },
+      {
+        id: 4,
+        label: "3ページ（お兄ちゃん登場）",
+        title: "探検家みたいなお兄ちゃん",
+        image: "page3.png",
+        text: "そこへ、お兄ちゃんがやってきた。\n探検家みたいなかっこうで、ニコニコしてる。",
+        dialogue: ""
+      },
+      {
+        id: 5,
+        label: "4ページ",
+        title: "ひみつを話すお兄ちゃん",
+        image: "page4.png",
+        text: "",
+        dialogue: "お兄ちゃん「ゆうくん、ここにはね、すごいひみつがあるんだよ！」"
+      },
+      {
+        id: 6,
+        label: "5ページ（レイオー紹介）",
+        title: "レイオー登場",
+        image: "page5.png",
+        text: "まあるくて白いおばけ「レイオー」。\nふわふわ浮かんで、にっこり笑ってる。",
+        dialogue: ""
+      },
+      {
+        id: 7,
+        label: "6ページ",
+        title: "レイオーの説明",
+        image: "page6.png",
+        text: "",
+        dialogue: "お兄ちゃん「レイオーはね、みんなのパワーをもらって元気になるんだ！」"
+      },
+      {
+        id: 8,
+        label: "7ページ（レイオー元気ない）",
+        title: "しょんぼりレイオー",
+        image: "page7.png",
+        text: "でも今日は、なんだか元気がないみたい…。\nちょっとしょんぼりしてる。",
+        dialogue: ""
+      },
+      {
+        id: 9,
+        label: "8ページ",
+        title: "内緒話するお兄ちゃん",
+        image: "page8.png",
+        text: "",
+        dialogue: "お兄ちゃん「ゆうくんの力があれば、レイオーは元気になるよ！」"
+      },
+      {
+        id: 10,
+        label: "9ページ（勇気を出す）",
+        title: "ドアの前に立つゆうくん",
+        image: "page9.png",
+        text: "ゆうくんは、ぎゅっと手をにぎって、\nドアの前に立った。",
+        dialogue: ""
+      },
+      {
+        id: 11,
+        label: "10ページ",
+        title: "決意の表情",
+        image: "page10.png",
+        text: "",
+        dialogue: "ゆうくん「……レイオーのために、がんばる！」"
+      },
+      {
+        id: 12,
+        label: "11ページ（成功の瞬間）",
+        title: "ひろがるひかり",
+        image: "page11.png",
+        text: "ゆうくんは、ついにできた！\nふわっと光が広がっていく。",
+        dialogue: ""
+      },
+      {
+        id: 13,
+        label: "12ページ",
+        title: "レイオー、どう？",
+        image: "page12.png",
+        text: "",
+        dialogue: "ゆうくん「レイオー、どう？」"
+      },
+      {
+        id: 14,
+        label: "13ページ（みんなで喜ぶ）",
+        title: "ぴかぴかのレイオー",
+        image: "page13.png",
+        text: "レイオーは、ぴかぴかにかがやいた。\nとってもうれしそう！",
+        dialogue: ""
+      },
+      {
+        id: 15,
+        label: "14ページ",
+        title: "みんなで「やったね！」",
+        image: "page14.png",
+        text: "",
+        dialogue: "お兄ちゃん「やったね、ゆうくん！」\nレイオー「ありがとう〜！げんきいっぱい！」"
+      },
+      {
+        id: 16,
+        label: "15ページ（裏表紙）",
+        title: "またあそびにきてね",
+        image: "page15.png",
+        text: "「またあそびにきてね」って言ってるみたい。",
+        dialogue: "レイオー「またね〜！」"
+      }
+    ];
+
+    let currentIndex = 0;
+
+    const imgEl = document.getElementById("page-image");
+    const metaEl = document.getElementById("page-meta");
+    const titleEl = document.getElementById("page-title");
+    const textEl = document.getElementById("page-text");
+    const dialogueEl = document.getElementById("page-dialogue");
+    const indicatorEl = document.getElementById("page-indicator");
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+
+    function renderPage() {
+      const page = pages[currentIndex];
+      imgEl.src = page.image;
+      imgEl.alt = page.title || "絵本ページのイラスト";
+      metaEl.textContent = page.label;
+      titleEl.textContent = page.title || "";
+      textEl.textContent = page.text || "";
+      if (page.dialogue && page.dialogue.trim() !== "") {
+        dialogueEl.style.display = "block";
+        dialogueEl.textContent = page.dialogue;
+      } else {
+        dialogueEl.style.display = "none";
+        dialogueEl.textContent = "";
+      }
+      indicatorEl.textContent = `${currentIndex + 1} / ${pages.length}`;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === pages.length - 1;
+    }
+
+    prevBtn.addEventListener("click", () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderPage();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentIndex < pages.length - 1) {
+        currentIndex++;
+        renderPage();
+      }
+    });
+
+    // キーボード左右キーでもページ送り
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        prevBtn.click();
+      } else if (e.key === "ArrowRight") {
+        nextBtn.click();
+      }
+    });
+
+    renderPage();
+  </script>
+</body>
+</html>
